@@ -1,0 +1,14 @@
+ @import "tailwindcss";
+ @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+.font-anton {
+  font-family: 'Anton', sans-serif;
+}
