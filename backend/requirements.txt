@@ -6,3 +6,6 @@ pydantic>=2.9.0
 supabase
 pandas
 scikit-learn
+APScheduler>=3.10.4
+google-genai>=1.0.0
+httpx>=0.27.0

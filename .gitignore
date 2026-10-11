@@ -1,4 +1,10 @@
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
 context.md
 calle_api.md
 db_schema.md
@@ -9,3 +15,12 @@ run_seed.py
 seed_out.txt
 webhooks_logs.txt
 webhook_logs.txt
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+dist/
+.vite/
+*.zip

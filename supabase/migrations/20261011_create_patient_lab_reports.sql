@@ -1,0 +1,2 @@
+-- Superseded before application. Patient model features are stored in the
+-- existing ml_feature_sets.hospital_features_json column.

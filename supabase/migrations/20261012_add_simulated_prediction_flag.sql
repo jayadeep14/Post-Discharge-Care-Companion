@@ -1,0 +1,2 @@
+-- Superseded before application. Prototype predictions use the existing
+-- readmission_predictions schema and actual patient age values.

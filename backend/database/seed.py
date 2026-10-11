@@ -2,7 +2,6 @@ import uuid
 import random
 from datetime import datetime, timedelta
 from backend.database.connection import supabase
-from backend.database.connection import supabase
 
 def clean_database():
     print("Nuking database records securely via manual cascades...")
@@ -13,11 +12,9 @@ def clean_database():
         supabase.table('patient_states').delete().eq('patient_id', pid).execute()
         supabase.table('issues').delete().eq('patient_id', pid).execute()
         supabase.table('call_alerts').delete().eq('patient_id', pid).execute()
-        supabase.table('ml_readmission_features').delete().eq('patient_id', pid).execute()
         supabase.table('call_events').delete().eq('patient_id', pid).execute()
         supabase.table('diagnoses').delete().eq('patient_id', pid).execute()
         supabase.table('medications_prescribed').delete().eq('patient_id', pid).execute()
-        supabase.table('follow_up_schedule').delete().eq('patient_id', pid).execute()
         supabase.table('patients').delete().eq('patient_id', pid).execute()
         
 def seed_patient(data):

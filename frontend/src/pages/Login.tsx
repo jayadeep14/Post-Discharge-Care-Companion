@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { ShieldPlus, Lock, Mail } from "lucide-react";
+import { ShieldPlus, Lock, UserRound } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { signInDemo } from "../lib/demoAuth";
 
 export default function Login() {
 
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Temporary login for the prototype
-    navigate("/");
+    setSubmitting(true);
+    setErrorMessage("");
+    const user = signInDemo(username, password);
+    setSubmitting(false);
+    if (!user) {
+      setErrorMessage("Username or password is incorrect. Use one of the sample accounts below.");
+      return;
+    }
+    navigate("/", { replace: true });
   };
 
   return (
@@ -53,7 +62,7 @@ export default function Login() {
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Sign in to your care team dashboard
+            Sign in to your care team dashboard or patient record
           </p>
 
 
@@ -62,25 +71,25 @@ export default function Login() {
             className="mt-6 space-y-5"
           >
 
-            {/* Email */}
+            {/* Username */}
             <div>
 
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                Email
+                Username
               </label>
 
               <div className="relative">
 
-                <Mail
+                <UserRound
                   size={18}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                 />
 
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
                   required
                   className="
                     h-11 w-full
@@ -145,6 +154,7 @@ export default function Login() {
             {/* Login */}
             <button
               type="submit"
+              disabled={submitting}
               className="
                 h-11 w-full
                 rounded-lg
@@ -156,17 +166,22 @@ export default function Login() {
                 hover:bg-[#053D2F]
               "
             >
-              Sign In
+              {submitting ? "Signing in…" : "Sign In"}
             </button>
+
+            {errorMessage && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage}</p>}
 
           </form>
 
         </div>
 
 
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Secure healthcare monitoring platform
-        </p>
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Sample demo accounts</p>
+          <p className="mt-2">Hospital: <code>hospital</code> / <code>hospital123</code></p>
+          <p>Patient: enter your patient ID as both username and password</p>
+          <p className="mt-2 text-xs">Demo access only. Do not use these credentials for real patient data.</p>
+        </div>
 
       </div>
 

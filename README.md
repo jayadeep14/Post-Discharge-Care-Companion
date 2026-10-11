@@ -1,126 +1,84 @@
-# CALL-E Post-Discharge Care Orchestrator
+# CALL-E Post-Discharge Care Companion
 
-Built for the [CALL-E: Your Code Is Calling](https://call-e.devpost.com/) hackathon.
+CALL-E is a post-discharge care coordination application with a hospital dashboard, patient portal, and Python API. Care teams can review patient information, follow-up activity, medication adherence, and readmission risk. Patients can review recovery information, documents, medications, and follow-up calls, and use the chat assistant for education.
 
-## What it does
+The application uses React, TypeScript, and Vite for the frontend; FastAPI for the backend; and Supabase for database access and realtime updates. Optional integrations support CALL-E outbound calls, Gemini-powered education, and a WhatsApp Web bridge.
 
-Hospitals struggle to track how patients are doing after they're discharged —
-missed medications, worsening symptoms, and unresolved issues often go
-unnoticed until the patient is readmitted. This project uses **CALL-E** to
-automate daily post-discharge check-in phone calls, turning each call into
-structured clinical data a care team can act on.
+## Features
 
-The system:
+- Hospital views for patient records, reports, settings, and readmission risk alerts.
+- Patient views for recovery overview, care plans, call history, alerts, documents, medication adherence, and chat.
+- API endpoints for outbound follow-up calls, medication education, patient chat, and readmission reports and scoring.
+- Scheduled follow-up processing and a Supabase realtime listener started with the API.
+- Readmission estimates using the packaged model and feature artifacts in `backend/`.
+- Optional WhatsApp webhook and local WhatsApp Web bridge.
 
-1. Pulls a discharged patient's diagnoses, prescribed medications, open
-   issues, and recent call history from the database.
-2. Uses **Gemini** to dynamically generate a tailored call instruction for
-   CALL-E (a first call gets a general check-in; a follow-up call is
-   targeted at the patient's specific open issues and medications).
-3. Dispatches the call through CALL-E with a structured result schema,
-   asking it to report on recovery status, new symptoms, and medication
-   adherence — including a dynamically generated check for every
-   medication and open issue the patient has.
-4. Receives the completed call result via a webhook, updates the patient's
-   state, resolves or flags issues, and logs medication adherence per drug.
-5. Runs the structured result through a clinical **alert detection** engine
-   that classifies each call as CRITICAL / HIGH / MEDIUM / LOW / NONE,
-   based on things like reported chest pain, missed doses, or worsening
-   recovery — so urgent cases get surfaced immediately.
-6. A **React dashboard** lets clinical staff view patients, call history,
-   alerts, and care plans.
-7. A trained ML model estimates hospital **readmission risk** from a
-   patient's clinical features, to help prioritize who gets called first.
+## Repository layout
 
-## Architecture
-
-```
-┌─────────────┐      ┌────────────────┐      ┌───────────────┐
-│   React      │◄────►│   FastAPI       │◄────►│   Supabase    │
-│  Dashboard   │      │   Backend       │      │  (Postgres)   │
-└─────────────┘      └───────┬────────┘      └───────────────┘
-                              │
-                 ┌────────────┼─────────────┐
-                 ▼                          ▼
-         ┌───────────────┐         ┌────────────────┐
-         │  CALL-E API    │         │  Gemini API     │
-         │ (places calls, │         │ (generates the  │
-         │  sends webhook)│         │  call task)     │
-         └───────────────┘         └────────────────┘
+```text
+backend/                 FastAPI application, integrations, services, and model artifacts
+backend/whatsapp-bridge/ Optional Node.js WhatsApp Web bridge
+frontend/                React, TypeScript, and Vite application
+supabase/migrations/     SQL migrations for application features
+supabase/                Optional readmission development seed data
 ```
 
-- **Backend**: FastAPI, orchestrates call triggering and webhook handling
-- **Database**: Supabase (Postgres) — patients, diagnoses, medications,
-  issues, call events, patient states, adherence tracking
-- **Voice AI**: CALL-E SDK — places and manages the actual phone calls
-- **Prompt generation**: Google Gemini — writes the per-call instruction
-  string based on patient context
-- **Frontend**: React + TypeScript + Vite + Tailwind, Supabase client for
-  reads, lucide-react icons, react-router-dom
-- **ML**: scikit-learn readmission risk model (trained on
-  `hospital_readmissions.csv`, saved as `readmission_model.joblib`)
+## Requirements
 
-## Repo layout
+- Python 3.10 or newer
+- Node.js and npm
+- A Supabase project with the base application schema and required migrations
+- Credentials for the integrations you enable
 
-This repo was developed across parallel feature branches; this README
-consolidates what each one contributed:
+## Configuration
 
-| Branch | Contribution |
-|---|---|
-| `feature/database-setup` | Initial Supabase connection, `.env` config, basic CALL-E client wiring |
-| `feature/database_integrations` | Full patient/diagnosis/medication/issue schema, repository layer, seed data, end-to-end test script |
-| `feature/chatbot-service` | CALL-E client service, webhook route, alert detection groundwork |
-| `feature/frontend-integration` | React clinician dashboard (patient overview, call history, alerts, care plan, reports, settings), alert detection engine |
-| `ai/ml` | Readmission risk model (`readmission_model.joblib`) and inference script (`run.py`) |
+Create `backend/.env`:
 
-## Setup
+```dotenv
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-server-side-supabase-key
+CALLE_API_KEY=your-calle-api-key
+WEBHOOK_URL=https://your-public-api-host/api/v1/calle/webhook
+GEMINI_API_KEY=your-gemini-api-key
+APP_ENV=development
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+ENABLE_HSTS=false
+
+# Needed for the WhatsApp webhook and optional local bridge
+VERIFY_TOKEN=your-webhook-verification-token
+LOCAL_GATEWAY_URL=http://127.0.0.1:3000/send
+```
+
+Create `frontend/.env.local` for local development:
+
+```dotenv
+VITE_API_URL=http://127.0.0.1:8000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_KEY=your-supabase-anon-key
+```
+
+The frontend uses the Supabase anon key. Keep service role keys and other private credentials on the server, and configure Supabase row-level security before using real patient data. Environment files are excluded from Git.
+
+Apply the SQL files under `supabase/migrations/` in filename order. They add or modify feature tables; they do not create the complete base schema. The backend and frontend also expect the base tables referenced in `backend/database/repository.py` and application screens.
+
+## Run locally
 
 ### Backend
 
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-Create a `.env` file in `backend/` with:
-
-```
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_service_or_anon_key
-CALLE_API_KEY=your_calle_api_key
-WEBHOOK_URL=your_public_webhook_url   # e.g. an ngrok URL + /api/v1/calle/webhook
-```
-
-Seed the database with sample patients:
+From the repository root:
 
 ```bash
-python -m backend.database.seed
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
-Run the backend:
-
-```bash
-uvicorn backend.main:app --reload
-```
-
-Expose the webhook publicly (CALL-E needs to reach your machine) with ngrok:
-
-```bash
-ngrok http 8000
-```
-
-Use the printed `https://...ngrok-free.app` URL (plus `/api/v1/calle/webhook`)
-as your `WEBHOOK_URL`.
-
-Trigger a call:
-
-```bash
-python -m backend.scripts.test_e2e
-```
+The health endpoint is `http://127.0.0.1:8000/`. In development, interactive API documentation is at `http://127.0.0.1:8000/docs`; API docs are disabled when `APP_ENV=production`. The backend requires its CALL-E configuration at startup. Gemini-powered chat, medication explanations, and WhatsApp replies require `GEMINI_API_KEY`.
 
 ### Frontend
+
+In another terminal:
 
 ```bash
 cd frontend
@@ -128,18 +86,37 @@ npm install
 npm run dev
 ```
 
-Requires a `.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY` pointing
-at the same Supabase project as the backend.
+Vite prints the local URL, normally `http://localhost:5173`.
 
-## API
+Available frontend commands from `frontend/`:
 
-- `POST /api/v1/calle/call/{patient_id}` — gathers patient context, generates
-  a call task via Gemini, and dispatches the call through CALL-E.
-- `POST /api/v1/calle/webhook` — receives CALL-E's call-completion event,
-  updates patient state, resolves/creates issues, and logs medication
-  adherence.
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
 
-## Team
+### Optional WhatsApp bridge
 
-Built by the CALL-E hackathon team as a trial project exploring post-discharge
-patient monitoring with AI-driven voice check-ins.
+Start the Node bridge in another terminal:
+
+```bash
+cd backend/whatsapp-bridge
+npm install
+node bridge.cjs
+```
+
+The bridge listens locally on port 3000 and provides the send endpoint configured by `LOCAL_GATEWAY_URL`. Link a WhatsApp account by scanning its QR code. Configure the WhatsApp webhook URL to point to the Python API's `/webhook` endpoint and set the matching `VERIFY_TOKEN`. The bridge keeps a local linked-device session; treat that session as private.
+
+## Readmission estimates
+
+The backend loads `backend/readmission_model.joblib` and `backend/model_features.joblib`. Patient-specific structured features are read from `ml_feature_sets.hospital_features_json`, and saved estimates are written to `readmission_predictions`. Hospital and patient views use the saved results. The model does not read PDF documents directly; relevant values must be entered or extracted into supported structured fields.
+
+Both model artifacts must be present for scoring, with a compatible scikit-learn version. Missing or unsupported inputs can make a score unavailable. The sample data in `supabase/seed_readmission_samples.sql` is optional development data; its `Readmitted` label is not a model input. Estimates support care coordination and do not replace clinical review.
+
+## Notes
+
+- Local demo sign-in is implemented in `frontend/src/lib/demoAuth.ts`. It is for demos and is not production authentication or access control.
+- Automated follow-up jobs run when the FastAPI application starts. Review scheduling and calling configuration before enabling calls against real patients.
+- This software supports care coordination and patient education. It does not replace a clinician's judgment or emergency services.
